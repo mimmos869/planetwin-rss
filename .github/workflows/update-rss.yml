@@ -1,10 +1,9 @@
-name: Aggiorna Feed RSS
+﻿name: Aggiorna Feed RSS
 
 on:
   schedule:
-    # Esegui ogni ora
-    - cron: '0 * * * *'
-  workflow_dispatch: # Permette esecuzione manuale
+    - cron: '0 * * * *'  # Ogni ora
+  workflow_dispatch:  # Permette esecuzione manuale
 
 jobs:
   update-rss:
@@ -19,9 +18,12 @@ jobs:
       with:
         python-version: '3.10'
     
+    - name: Setup Chrome
+      uses: browser-actions/setup-chrome@latest
+    
     - name: Install dependencies
       run: |
-        pip install requests beautifulsoup4
+        pip install selenium webdriver-manager requests beautifulsoup4
     
     - name: Esegui scraper
       run: |
