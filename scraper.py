@@ -1,13 +1,15 @@
-﻿from selenium import webdriver
+﻿import requests
+from bs4 import BeautifulSoup
+from datetime import datetime
+import xml.etree.ElementTree as ET
+from xml.dom import minidom
+from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from webdriver_manager.chrome import ChromeDriverManager
-from datetime import datetime
-import xml.etree.ElementTree as ET
-from xml.dom import minidom
 import time
 
 def scrape_promos_selenium(url):
@@ -26,54 +28,35 @@ def scrape_promos_selenium(url):
         print("⏳ Attendo caricamento pagina...")
         
         wait = WebDriverWait(driver, 15)
-        wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, "article.promo--item, article[class*='promo']")))
+        wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, "article.promo--item")))
         
         time.sleep(3)
         
-        promos = driver.find_elements(By.CSS_SELECTOR, "article.promo--item, article[class*='promo']")
+        promos = driver.find_elements(By.CSS_SELECTOR, "article.promo--item")
         
         print(f"\n🔍 Trovati {len(promos)} elementi di promozione sulla pagina\n")
         
         promo_list = []
         for idx, promo in enumerate(promos, 1):
             try:
-                try:
-                    title_elem = promo.find_element(By.CSS_SELECTOR, "h2.promo--title, h2[class*='title']")
-                    title_text = title_elem.text.strip()
-                except:
-                    title_text = "Promozione"
+                title_elem = promo.find_element(By.CSS_SELECTOR, "h2.promo--title")
+                title_text = title_elem.text.strip()
                 
                 print(f"  [{idx}] Elaborazione: {title_text}")
                 
-                try:
-                    desc_elem = promo.find_element(By.CSS_SELECTOR, "div.promo--txt, div[class*='txt'], div[class*='description']")
-                    description = desc_elem.text.strip()
-                except:
-                    description = ""
+                desc_elem = promo.find_element(By.CSS_SELECTOR, "div.promo--txt")
+                description = desc_elem.text.strip()
                 
-                try:
-                    img_elem = promo.find_element(By.TAG_NAME, "img")
-                    img_url = img_elem.get_attribute('src')
-                except:
-                    img_url = ""
+                img_elem = promo.find_element(By.TAG_NAME, "img")
+                img_url = img_elem.get_attribute('src')
                 
-                try:
-                    link_elem = promo.find_element(By.CSS_SELECTOR, "a, button[title*='Dettagli']")
-                    link = link_elem.get_attribute('href') or url
-                except:
-                    link = url
-                
-                if title_text != "Promozione" or description:
-                    promo_list.append({
-                        'title': title_text,
-                        'description': description,
-                        'image': img_url,
-                        'link': link,
-                        'pub_date': datetime.now().strftime('%a, %d %b %Y %H:%M:%S +0000')
-                    })
-                    print(f"      ✅ Aggiunta al feed")
-                else:
-                    print(f"      ⏭️  Saltata (contenuto vuoto)")
+                promo_list.append({
+                    'title': title_text,
+                    'description': description,
+                    'image': img_url,
+                    'pub_date': datetime.now().strftime('%a, %d %b %Y %H:%M:%S +0000')
+                })
+                print(f"      ✅ Aggiunta al feed")
                     
             except Exception as e:
                 print(f"      ❌ Errore: {e}")
@@ -109,7 +92,7 @@ def generate_rss(promos, output_file='promozioni.xml'):
         if promo['image']:
             ET.SubElement(item, 'enclosure', url=promo['image'], type='image/jpeg')
         
-        ET.SubElement(item, 'link').text = promo['link']
+        ET.SubElement(item, 'link').text = 'https://www.planetwin365.it/bonus/scommesse'
         ET.SubElement(item, 'pubDate').text = promo['pub_date']
         ET.SubElement(item, 'guid', isPermaLink='false').text = f"{promo['title']}_{promo['pub_date']}"
     
@@ -136,10 +119,6 @@ if __name__ == '__main__':
             print("\n🎉 Processo completato con successo!")
         else:
             print("\n⚠️  Nessuna promozione trovata!")
-            print("Possibili cause:")
-            print("  - La pagina non contiene promozioni al momento")
-            print("  - La struttura HTML è cambiata")
-            print("  - Protezioni anti-bot troppo forti")
     except Exception as e:
         print(f"\n❌ Errore generale: {e}")
         import traceback
