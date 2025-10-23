@@ -1,4 +1,4 @@
-from selenium import webdriver
+﻿from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.chrome.options import Options
@@ -11,11 +11,8 @@ from xml.dom import minidom
 import time
 
 def scrape_promos_selenium(url):
-    """Scrape delle promozioni usando Selenium"""
-    
-    # Configurazione Chrome
     chrome_options = Options()
-    chrome_options.add_argument('--headless')  # Esegui senza aprire finestra
+    chrome_options.add_argument('--headless')
     chrome_options.add_argument('--no-sandbox')
     chrome_options.add_argument('--disable-dev-shm-usage')
     chrome_options.add_argument('--disable-blink-features=AutomationControlled')
@@ -28,14 +25,11 @@ def scrape_promos_selenium(url):
         driver.get(url)
         print("⏳ Attendo caricamento pagina...")
         
-        # Aspetta che gli elementi delle promo si carichino
         wait = WebDriverWait(driver, 15)
         wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, "article.promo--item, article[class*='promo']")))
         
-        # Aspetta un po' per il caricamento dinamico
         time.sleep(3)
         
-        # Trova tutti gli articoli delle promo
         promos = driver.find_elements(By.CSS_SELECTOR, "article.promo--item, article[class*='promo']")
         
         print(f"\n🔍 Trovati {len(promos)} elementi di promozione sulla pagina\n")
@@ -43,7 +37,6 @@ def scrape_promos_selenium(url):
         promo_list = []
         for idx, promo in enumerate(promos, 1):
             try:
-                # Estrai titolo
                 try:
                     title_elem = promo.find_element(By.CSS_SELECTOR, "h2.promo--title, h2[class*='title']")
                     title_text = title_elem.text.strip()
@@ -52,28 +45,25 @@ def scrape_promos_selenium(url):
                 
                 print(f"  [{idx}] Elaborazione: {title_text}")
                 
-                # Estrai descrizione
                 try:
                     desc_elem = promo.find_element(By.CSS_SELECTOR, "div.promo--txt, div[class*='txt'], div[class*='description']")
                     description = desc_elem.text.strip()
                 except:
                     description = ""
                 
-                # Estrai immagine
                 try:
                     img_elem = promo.find_element(By.TAG_NAME, "img")
                     img_url = img_elem.get_attribute('src')
                 except:
                     img_url = ""
                 
-                # Estrai link (se disponibile)
                 try:
                     link_elem = promo.find_element(By.CSS_SELECTOR, "a, button[title*='Dettagli']")
                     link = link_elem.get_attribute('href') or url
                 except:
                     link = url
                 
-                if title_text != "Promozione" or description:  # Aggiungi solo se ha contenuto
+                if title_text != "Promozione" or description:
                     promo_list.append({
                         'title': title_text,
                         'description': description,
@@ -97,8 +87,6 @@ def scrape_promos_selenium(url):
         print("🔒 Browser chiuso")
 
 def generate_rss(promos, output_file='promozioni.xml'):
-    """Genera il feed RSS"""
-    
     rss = ET.Element('rss', version='2.0')
     channel = ET.SubElement(rss, 'channel')
     
@@ -112,12 +100,14 @@ def generate_rss(promos, output_file='promozioni.xml'):
         item = ET.SubElement(channel, 'item')
         ET.SubElement(item, 'title').text = promo['title']
         
-        # Descrizione con immagine
         desc_html = f"<![CDATA["
         if promo['image']:
             desc_html += f"<img src='{promo['image']}' style='max-width:100%; height:auto;'/><br/><br/>"
         desc_html += f"{promo['description']}]]>"
         ET.SubElement(item, 'description').text = desc_html
+        
+        if promo['image']:
+            ET.SubElement(item, 'enclosure', url=promo['image'], type='image/jpeg')
         
         ET.SubElement(item, 'link').text = promo['link']
         ET.SubElement(item, 'pubDate').text = promo['pub_date']
